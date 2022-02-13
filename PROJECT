@@ -1,0 +1,6 @@
+domain: atmax.io
+layout:
+- go.kubebuilder.io/v3
+projectName: zookeeper-operator
+repo: github.com/jsonbruce/zookeeper-operator
+version: "3"
