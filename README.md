@@ -38,9 +38,9 @@ metadata:
 spec:
   replicas: 3
   config:
-  - ZOO_TICK_TIME: 2000
-  - ZOO_INIT_LIMIT: 5
-  - ZOO_SYNC_LIMIT: 2
+    ZOO_TICK_TIME: 2000
+    ZOO_INIT_LIMIT: 5
+    ZOO_SYNC_LIMIT: 2
 ```
 
 2. Deploy this CR
