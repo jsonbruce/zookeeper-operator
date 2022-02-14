@@ -39,7 +39,7 @@ spec:
                 additionalProperties:
                   type: integer
                 description: Config is a group of environment variables, which will
-                  be the zookeeper configuration
+                  be injected to the zookeeper configuration
                 type: object
               replicas:
                 description: Replicas is the desired servers count of a zookeeper
@@ -54,7 +54,7 @@ spec:
                 description: Address is the exposed service endpoint of the cluster
                 type: string
               readyReplicas:
-                description: ReadyReplicas is the ready replicas count in the cluster
+                description: ReadyReplicas is the actual replicas count in the cluster
                 format: int32
                 type: integer
               replicas:
