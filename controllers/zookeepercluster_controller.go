@@ -76,6 +76,12 @@ func (r *ZookeeperClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	svcClient := r.createService(zk)
+	if err := r.Create(ctx, svcClient); err != nil {
+		r.Logger.Error(err, "creating client service")
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -142,6 +148,27 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+func (r *ZookeeperClusterReconciler) createService(zk *zookeeperv1alpha1.ZookeeperCluster) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      zk.Name,
+			Namespace: zk.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Selector: map[string]string{
+				"app": zk.Name,
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name: "client",
+					Port: 2181,
 				},
 			},
 		},
