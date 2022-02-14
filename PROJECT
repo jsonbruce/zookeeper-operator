@@ -3,4 +3,14 @@ layout:
 - go.kubebuilder.io/v3
 projectName: zookeeper-operator
 repo: github.com/jsonbruce/zookeeper-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: atmax.io
+  group: zookeeper
+  kind: ZookeeperCluster
+  path: github.com/jsonbruce/zookeeper-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
