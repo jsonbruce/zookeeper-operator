@@ -15,7 +15,16 @@ spec:
     singular: zookeepercluster
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The actual Zookeeper servers
+      jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - description: The exposed service endpoint of the cluster
+      jsonPath: .status.address
+      name: Address
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ZookeeperCluster is the Schema for the zookeeperclusters API

@@ -52,6 +52,8 @@ type ZookeeperClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`,description="The actual Zookeeper servers"
+//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.address`,description="The exposed service endpoint of the cluster"
 
 // ZookeeperCluster is the Schema for the zookeeperclusters API
 type ZookeeperCluster struct {
