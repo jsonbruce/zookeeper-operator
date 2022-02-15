@@ -195,6 +195,14 @@ func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1
 }
 
 func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.ZookeeperCluster) *appsv1.StatefulSet {
+	podEnvs := []corev1.EnvVar{}
+	for k, v := range zk.Spec.Config {
+		podEnvs = append(podEnvs, corev1.EnvVar{
+			Name:  k,
+			Value: fmt.Sprintf("%d", v),
+		})
+	}
+
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zk.Name,
@@ -218,15 +226,10 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "zookeeper",
+							Name:  zk.Name,
 							Image: "zookeeper:latest",
 							Ports: nil,
-							Env: []corev1.EnvVar{
-								{
-									Name:  "ZOO_ENV",
-									Value: "10",
-								},
-							},
+							Env:   podEnvs,
 						},
 					},
 				},
