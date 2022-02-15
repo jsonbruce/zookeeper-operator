@@ -48,6 +48,9 @@ type ZookeeperClusterStatus struct {
 
 	// Address is the exposed service endpoint of the cluster
 	Address string `json:"address,omitempty"`
+
+	// Nodes is the cluster pod status, podIP and role
+	Nodes map[string]string `json:"nodes,omitempty"`
 }
 
 //+kubebuilder:object:root=true

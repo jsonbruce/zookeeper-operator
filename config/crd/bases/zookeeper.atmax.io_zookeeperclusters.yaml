@@ -62,6 +62,11 @@ spec:
               address:
                 description: Address is the exposed service endpoint of the cluster
                 type: string
+              nodes:
+                additionalProperties:
+                  type: string
+                description: Nodes is the cluster pod status, podIP and role
+                type: object
               readyReplicas:
                 description: ReadyReplicas is the actual replicas count in the cluster
                 format: int32

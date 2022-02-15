@@ -153,12 +153,27 @@ func (r *ZookeeperClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		zk.Status.Address = fmt.Sprintf("%s:%d", pods.Items[0].Status.HostIP, actualServiceClient.Spec.Ports[0].NodePort)
 	}
 
+	zk.Status.Nodes = make(map[string]string)
+	for _, pod := range pods.Items {
+		podIP := pod.Status.PodIP
+		if len(podIP) == 0 {
+			continue
+		}
+		zkStat, err := GetZookeeperStat(podIP)
+		if err != nil {
+			r.Logger.Error(err, "GetZookeeperStat")
+			continue
+		}
+
+		zk.Status.Nodes[podIP] = zkStat.ServerStats.ServerState
+	}
+
 	if err := r.Status().Update(ctx, zk); err != nil {
 		r.Logger.Error(err, "update zk status")
 		return ctrl.Result{}, err
 	}
 
-	if zk.Spec.Replicas == int32(len(pods.Items)) {
+	if zk.Spec.Replicas == int32(len(pods.Items)) && zk.Spec.Replicas == int32(len(zk.Status.Nodes)) {
 		r.Logger.Info("Stop reconciling")
 		return ctrl.Result{}, nil
 	}
