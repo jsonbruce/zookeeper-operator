@@ -1,6 +1,22 @@
 # Design of Zookeeper Operator
 
-From our product requirements, the most important part is how to sync Zookeeper stats into CR Status. 
+This document describes the architecture and core design of this Zookeeper Operator. 
+
+## Architecture
+
+We use `Zookeeper Operator` to manage the full lifecycle of a Zookeeper cluster. As also shown below, the operator manages cluster via `StatefulSet`.
+
+![architecture.png](architecture.png)
+
+Let's use an example to demonstrate how the Zookeeper Operator works for the case when user creates a Zookeeper Cluster:
+
+- Operator creates a headless Service, which will be used in the StatefulSet internally
+- Operator creates a StatefulSet, which `.spec.replicas` is the same as CR
+- Operator creates a client Service, which type is `NodePort` and port mapping to `2181`. This is used to expose the Zookeeper service to external users 
+- Operator updates the `.status.readyReplicas` of CR
+- Operator syncs Zookeeper stats into `.status.nodes` of CR
+
+We can notice that the most important part is how to sync Zookeeper stats into CR Status.
 There are two solutions we've figured out:
 
 - Solution#1: Sync Zookeeper stats inside the `Reconcile` directly
@@ -15,7 +31,7 @@ According to current design and implementation, the below diagram illustrates en
 
 The reconciliation strategy for resources is creating if no exist. The zookeeper stats will be sync into `.status.nodes`, which is a map, the key is node ip and value is node role.
 
-We stop requeue by comparing the actual and number of Pods, the number of `.status.nodes` with the desired replicas. 
+We stop requeue by comparing the actual and number of Pods, the size of `.status.nodes` with the desired replicas. 
 
 ### Pros & Cons
 Pros:
@@ -28,6 +44,20 @@ Cons:
 - High delay. Request the zookeeper stats can be time consuming if there are many replica Pods
 - Blocking operation. Other operations like update on this CR can be blocked if there are failed sync stats action 
 
+## Solution#2
+
+We put the sync stats in another sidecar container as shows below:
+
+![sequence2.png](sequence2.png)
+
+### Pros & Cons
+Pros:
+
+- Asynchronous operation. Decouple the status and stats will not block the main control loop
+
+Cons:
+
+- No guarantee stats, as the sync stats action is asynchronous with the main controller
 
 ## FAQ
 ### How to get Zookeeper stats from a Pod?
@@ -74,8 +104,10 @@ By Zookeeper AdminService. We can request the `http://{podIP}:8080/commands/stat
 }
 ```
 
+The `.server_stats.server_state` indicates the role of thie node in the Zookeeper cluster, which value can be `leader`, `follower`, or `standalone`.
 
 # References
 
+- Operator pattern, https://kubernetes.io/docs/concepts/extend-kubernetes/operator/
 - Running Zookeeper on Kubernetes, https://kubernetes.io/docs/tutorials/stateful-application/zookeeper/
 - ZooKeeper Administrator's Guide, https://zookeeper.apache.org/doc/r3.7.0/zookeeperAdmin.html
