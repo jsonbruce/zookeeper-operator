@@ -29,9 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrl_log "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	zookeeperv1alpha1 "github.com/jsonbruce/zookeeper-operator/api/v1alpha1"
 )
@@ -336,6 +338,6 @@ func (r *ZookeeperClusterReconciler) createService(zk *zookeeperv1alpha1.Zookeep
 // SetupWithManager sets up the controller with the Manager.
 func (r *ZookeeperClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&zookeeperv1alpha1.ZookeeperCluster{}).
+		For(&zookeeperv1alpha1.ZookeeperCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
