@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrl_log "sigs.k8s.io/controller-runtime/pkg/log"
 
 	zookeeperv1alpha1 "github.com/jsonbruce/zookeeper-operator/api/v1alpha1"
@@ -41,6 +43,10 @@ type ZookeeperClusterReconciler struct {
 
 	Logger logr.Logger
 }
+
+var (
+	ErrResultRequeue = fmt.Errorf("need requeue")
+)
 
 type reconcileFunc func(ctx context.Context, zk *zookeeperv1alpha1.ZookeeperCluster) error
 
@@ -72,11 +78,17 @@ func (r *ZookeeperClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.reconcileHeadlessService,
 		r.reconcileStatefulSet,
 		r.reconcileClientService,
+		r.reconcileZookeeperClusterStatus,
 	} {
 		if err := fn(ctx, zk); err != nil {
+			if err == ErrResultRequeue {
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 	}
+
+	r.Logger.Info("Stop reconcile")
 
 	return ctrl.Result{}, nil
 }
@@ -86,6 +98,10 @@ func (r *ZookeeperClusterReconciler) reconcileHeadlessService(ctx context.Contex
 
 	desiredServiceHeadless := r.createHeadlessService(zk)
 	actualServiceHeadless := &corev1.Service{}
+
+	if err := controllerutil.SetOwnerReference(zk, desiredServiceHeadless, r.Scheme); err != nil {
+		return err
+	}
 
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: desiredServiceHeadless.Namespace,
@@ -113,6 +129,10 @@ func (r *ZookeeperClusterReconciler) reconcileStatefulSet(ctx context.Context, z
 	desiredStatefulSet := r.createStatefulSet(zk)
 	actualStatefulSet := &appsv1.StatefulSet{}
 
+	if err := controllerutil.SetOwnerReference(zk, desiredStatefulSet, r.Scheme); err != nil {
+		return err
+	}
+
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: desiredStatefulSet.Namespace,
 		Name:      desiredStatefulSet.Name,
@@ -138,6 +158,10 @@ func (r *ZookeeperClusterReconciler) reconcileClientService(ctx context.Context,
 
 	desiredServiceClient := r.createService(zk)
 	actualServiceClient := &corev1.Service{}
+
+	if err := controllerutil.SetOwnerReference(zk, desiredServiceClient, r.Scheme); err != nil {
+		return err
+	}
 
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: desiredServiceClient.Namespace,
@@ -178,17 +202,25 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 		return err
 	}
 
-	zk.Status.ReadyReplicas = int32(len(actualPods.Items))
 	if len(actualPods.Items) > 0 && len(actualPods.Items[0].Status.HostIP) > 0 {
 		zk.Status.Address = fmt.Sprintf("%s:%d", actualPods.Items[0].Status.HostIP, actualServiceClient.Spec.Ports[0].NodePort)
 	}
 
-	zk.Status.Nodes = make(map[string]string)
+	if zk.Status.Nodes == nil {
+		zk.Status.Nodes = make(map[string]string)
+	}
+
+	readyReplicas := 0
 	for _, pod := range actualPods.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			readyReplicas++
+		}
+
 		podIP := pod.Status.PodIP
 		if len(podIP) == 0 {
 			continue
 		}
+
 		zkStat, err := GetZookeeperStat(podIP)
 		if err != nil {
 			r.Logger.Error(err, "GetZookeeperStat")
@@ -198,17 +230,14 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 		zk.Status.Nodes[podIP] = zkStat.ServerStats.ServerState
 	}
 
-	if err := r.Status().Update(ctx, zk); err != nil {
-		r.Logger.Error(err, "update zk status")
-		return err
+	zk.Status.ReadyReplicas = int32(readyReplicas)
+
+	if zk.Spec.Replicas != zk.Status.ReadyReplicas || zk.Spec.Replicas != int32(len(zk.Status.Nodes)) {
+		fmt.Println("@@Send ErrResultRequeue")
+		return ErrResultRequeue
 	}
 
-	if zk.Spec.Replicas == int32(len(actualPods.Items)) && zk.Spec.Replicas == int32(len(zk.Status.Nodes)) {
-		r.Logger.Info("Stop reconciling")
-		return nil
-	}
-
-	return nil
+	return r.Status().Update(ctx, zk)
 }
 
 func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1.ZookeeperCluster) *corev1.Service {
