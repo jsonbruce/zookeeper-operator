@@ -48,10 +48,6 @@ type ZookeeperClusterReconciler struct {
 	Logger logr.Logger
 }
 
-var (
-	ErrResultRequeue = fmt.Errorf("need requeue")
-)
-
 type reconcileFunc func(ctx context.Context, zk *zookeeperv1alpha1.ZookeeperCluster) error
 
 //+kubebuilder:rbac:groups=zookeeper.atmax.io,resources=zookeeperclusters,verbs=get;list;watch;create;update;patch;delete
@@ -85,16 +81,11 @@ func (r *ZookeeperClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.reconcileZookeeperClusterStatus,
 	} {
 		if err := fn(ctx, zk); err != nil {
-			if err == ErrResultRequeue {
-				return ctrl.Result{RequeueAfter: time.Second}, nil
-			}
 			return ctrl.Result{}, err
 		}
 	}
 
-	r.Logger.Info("Stop reconcile")
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 func (r *ZookeeperClusterReconciler) reconcileHeadlessService(ctx context.Context, zk *zookeeperv1alpha1.ZookeeperCluster) error {
@@ -242,15 +233,7 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 		zk.Status.ReadyReplicas++
 	}
 
-	if err := r.Status().Update(ctx, zk); err != nil {
-		return err
-	}
-
-	if zk.Spec.Replicas == zk.Status.ReadyReplicas {
-		return nil
-	}
-
-	return ErrResultRequeue
+	return r.Status().Update(ctx, zk)
 }
 
 func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1.ZookeeperCluster) *corev1.Service {
