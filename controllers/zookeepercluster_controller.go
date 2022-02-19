@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -214,10 +215,6 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 
 	readyReplicas := 0
 	for _, pod := range actualPods.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			readyReplicas++
-		}
-
 		podIP := pod.Status.PodIP
 		if len(podIP) == 0 {
 			continue
@@ -225,21 +222,25 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 
 		zkStat, err := GetZookeeperStat(podIP)
 		if err != nil {
-			r.Logger.Error(err, "GetZookeeperStat")
+			r.Logger.Info(fmt.Sprintf("Get Zookeeper stat error: %v", err))
 			continue
 		}
 
 		zk.Status.Nodes[podIP] = zkStat.ServerStats.ServerState
+		readyReplicas++
 	}
 
 	zk.Status.ReadyReplicas = int32(readyReplicas)
 
-	if zk.Spec.Replicas != zk.Status.ReadyReplicas || zk.Spec.Replicas != int32(len(zk.Status.Nodes)) {
-		fmt.Println("@@Send ErrResultRequeue")
-		return ErrResultRequeue
+	if err := r.Status().Update(ctx, zk); err != nil {
+		return err
 	}
 
-	return r.Status().Update(ctx, zk)
+	if zk.Spec.Replicas == zk.Status.ReadyReplicas && zk.Spec.Replicas == int32(len(zk.Status.Nodes)) {
+		return nil
+	}
+
+	return ErrResultRequeue
 }
 
 func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1.ZookeeperCluster) *corev1.Service {
@@ -271,12 +272,59 @@ func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1
 }
 
 func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.ZookeeperCluster) *appsv1.StatefulSet {
-	podEnvs := []corev1.EnvVar{}
-	for k, v := range zk.Spec.Config {
-		podEnvs = append(podEnvs, corev1.EnvVar{
-			Name:  k,
-			Value: fmt.Sprintf("%d", v),
-		})
+	generateServers := func(size int) string {
+		servers := []string{}
+		for i := 0; i < size; i++ {
+			servers = append(servers, fmt.Sprintf("server.%d=%s-%d.%s-headless:2888:3888;2181", i, zk.Name, i, zk.Name))
+		}
+		return strings.Join(servers, " ")
+	}
+
+	getPorts := func() []corev1.ContainerPort {
+		return []corev1.ContainerPort{
+			{
+				Name:          "client",
+				ContainerPort: 2181,
+			},
+			{
+				Name:          "server",
+				ContainerPort: 2888,
+			},
+			{
+				Name:          "leader-election",
+				ContainerPort: 3888,
+			},
+			{
+				Name:          "admin-server",
+				ContainerPort: 8080,
+			},
+		}
+	}
+
+	getEnvs := func() []corev1.EnvVar {
+		podEnvs := []corev1.EnvVar{
+			{
+				Name:  "ZOO_SERVERS",
+				Value: generateServers(int(zk.Spec.Replicas)),
+			},
+		}
+		for k, v := range zk.Spec.Config {
+			podEnvs = append(podEnvs, corev1.EnvVar{
+				Name:  k,
+				Value: fmt.Sprintf("%d", v),
+			})
+		}
+		return podEnvs
+	}
+
+	getLifecycle := func() *corev1.Lifecycle {
+		return &corev1.Lifecycle{
+			PostStart: &corev1.LifecycleHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{"/bin/sh", "-c", "echo ${HOSTNAME##*-} > ${ZOO_DATA_DIR}/myid"},
+				},
+			},
+		}
 	}
 
 	return &appsv1.StatefulSet{
@@ -302,10 +350,11 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  zk.Name,
-							Image: "zookeeper:latest",
-							Ports: nil,
-							Env:   podEnvs,
+							Name:      zk.Name,
+							Image:     "zookeeper:latest",
+							Ports:     getPorts(),
+							Env:       getEnvs(),
+							Lifecycle: getLifecycle(),
 						},
 					},
 				},
