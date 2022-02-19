@@ -248,10 +248,6 @@ func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name: "client",
-					Port: 2181,
-				},
-				{
 					Name: "server",
 					Port: 2888,
 				},
@@ -272,7 +268,7 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 	generateServers := func(size int) string {
 		servers := []string{}
 		for i := 0; i < size; i++ {
-			servers = append(servers, fmt.Sprintf("server.%d=%s-%d.%s-headless:2888:3888;2181", i, zk.Name, i, zk.Name))
+			servers = append(servers, fmt.Sprintf("server.%d=%s-%d.%s-headless.%s.svc.cluster.local:2888:3888;2181", i, zk.Name, i, zk.Name, zk.Namespace))
 		}
 		return strings.Join(servers, " ")
 	}
@@ -318,7 +314,7 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 		return &corev1.Lifecycle{
 			PostStart: &corev1.LifecycleHandler{
 				Exec: &corev1.ExecAction{
-					Command: []string{"/bin/sh", "-c", "echo ${HOSTNAME##*-} > ${ZOO_DATA_DIR}/myid"},
+					Command: []string{"/bin/sh", "-c", "echo ${HOSTNAME##*-} > ${ZOO_DATA_DIR}/myid && sed -i -e \"s/$(hostname -f)/0.0.0.0/g\" ${ZOO_CONF_DIR}/zoo.cfg"},
 				},
 			},
 		}
