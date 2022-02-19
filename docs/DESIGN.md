@@ -42,7 +42,10 @@ Pros:
 Cons:
 
 - High delay. Request the zookeeper stats can be time consuming if there are many replica Pods
-- Blocking operation. Other operations like update on this CR can be blocked if there are failed sync stats action 
+- Blocking operation. Other operations like update on this CR can be blocked if there are failed sync stats action
+
+But we can avoid these two cons via concurrent request and fast return. For the concurrent request, we can start a single goroutine for each Pod. 
+For the fast return, we can run a pre-check function before each requeue, so we can return reconcile this time if pre-check received a new event.
 
 ## Solution#2
 
@@ -104,10 +107,21 @@ By Zookeeper AdminService. We can request the `http://{podIP}:8080/commands/stat
 }
 ```
 
-The `.server_stats.server_state` indicates the role of thie node in the Zookeeper cluster, which value can be `leader`, `follower`, or `standalone`.
+The `.server_stats.server_state` indicates the role of this node in the Zookeeper cluster, which value can be `leader`, `follower`, or `standalone`.
+
+We'll get below response when the cluster is not ready yet: 
+
+```json
+{
+  "command" : "stat",
+  "error" : "This ZooKeeper instance is not currently serving requests"
+}
+```
 
 # References
 
 - Operator pattern, https://kubernetes.io/docs/concepts/extend-kubernetes/operator/
 - Running Zookeeper on Kubernetes, https://kubernetes.io/docs/tutorials/stateful-application/zookeeper/
+- Kubebuilder Documentation, https://book.kubebuilder.io/
 - ZooKeeper Administrator's Guide, https://zookeeper.apache.org/doc/r3.7.0/zookeeperAdmin.html
+- Zookeeper Official Image: https://hub.docker.com/_/zookeeper
