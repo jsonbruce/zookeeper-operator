@@ -4,15 +4,15 @@ A simple Zookeeper Operator, which is responsible for operating zookeeper cluste
 
 What we have?
 
-- [ ] Deploy a zookeeper cluster quickly
-- [ ] Zookeeper configurations load
-- [ ] Expose zookeeper service to user
-- [ ] Zookeeper status from `zk-cli stat`
+- [x] Deploy a zookeeper cluster quickly
+- [x] Zookeeper configurations load
+- [x] Expose zookeeper service to user
+- [x] Zookeeper cluster status synchronization
 
 What not provided?
 
-- [x] Zookeeper configurations reload
-- [x] Webhook
+- [ ] Zookeeper configurations reload
+- [ ] Webhook
 
 ## Installation
 1. Deploy the CRD
@@ -31,10 +31,10 @@ kubectl create -f zk-controller.yaml
 1. Create a CR named `zk-cr.yaml` with below contents to setup a 3-node zookeeper cluster
 
 ```yaml
-apiVersion: "zookeeper.atmax.io/v1alpha1"
+apiVersion: "zookeepercluster.atmax.io/v1alpha1"
 kind: "ZookeeperCluster"
 metadata:
-  name: "zookeeper"
+  name: "zookeepercluster-sample"
 spec:
   replicas: 3
   config:
@@ -57,9 +57,9 @@ NAME                      READY   ENDPOINT
 zookeepercluster-sample   3       10.80.31.21:16146  
 ```
 
-Then user can access the Zookeeper cluster via `10.0.0.1:2181`
+Then user can access the Zookeeper cluster via `10.80.31.21:16146`
 
-We can also get more details about this cluster via `kubectl get zookeepercluster zookeepercluster-sample -o yaml` 
+More details about this cluster can be found via `kubectl get zookeepercluster zookeepercluster-sample -o yaml` 
 
 ```yaml
 status:
