@@ -12,9 +12,9 @@ Let's use an example to demonstrate how the Zookeeper Operator works for the cas
 
 - Operator creates a headless Service, which will be used in the StatefulSet internally
 - Operator creates a StatefulSet, which `.spec.replicas` is the same as CR
-- Operator creates a client Service, which type is `NodePort` and port mapping to `2181`. This is used to expose the Zookeeper service to external users 
-- Operator updates the `.status.readyReplicas` of CR
-- Operator syncs Zookeeper stats into `.status.nodes` of CR
+- Operator creates a client Service, which type is `NodePort` and port mapping to `2181`. This is used to expose the Zookeeper service to external users
+- Operator updates the `.status.readyReplicas` of CR, which is the number of ready servers
+- Operator syncs Zookeeper stats into `.status.servers` of CR
 
 We can notice that the most important part is how to sync Zookeeper stats into CR Status.
 There are two solutions we've figured out:
@@ -29,9 +29,9 @@ According to current design and implementation, the below diagram illustrates en
 
 ![sequence.png](sequence.png)
 
-The reconciliation strategy for resources is creating if no exist. The zookeeper stats will be sync into `.status.nodes`, which is a map, the key is node ip and value is node role.
+The reconciliation strategy for resources is creating if no exist. The zookeeper stats will be sync into `.status.servers`, which is a map, the key is server role and value is server state.
 
-We stop requeue by comparing the actual and number of Pods, the size of `.status.nodes` with the desired replicas. 
+We stop requeue by comparing the actual and number of Pods, the size of `.status.servers` with the desired replicas. So we can say the cluster is ready when all servers respond stats successfully.
 
 ### Pros & Cons
 Pros:
