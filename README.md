@@ -52,10 +52,29 @@ kubectl create -f zk-cr.yaml
 3. Observe the cluster status
 
 ```
-➜ kubectl get zookeeper
-
-NAME        READY    ADDRESS
-zookeeper   3/3      10.0.0.1:2181           
+➜  kubectl get zookeepercluster                              
+NAME                      READY   ENDPOINT
+zookeepercluster-sample   3       10.80.31.21:16146  
 ```
 
 Then user can access the Zookeeper cluster via `10.0.0.1:2181`
+
+We can also get more details about this cluster via `kubectl get zookeepercluster zookeepercluster-sample -o yaml` 
+
+```yaml
+status:
+  endpoint: 10.80.31.21:16146
+  readyReplicas: 3
+  servers:
+    follower:
+    - address: 10.0.5.141
+      packets_received: 0
+      packets_sent: 0
+    - address: 10.0.1.105
+      packets_received: 0
+      packets_sent: 0
+    leader:
+    - address: 10.0.3.54
+      packets_received: 0
+      packets_sent: 0
+```
