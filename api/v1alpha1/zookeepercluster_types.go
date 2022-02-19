@@ -35,6 +35,15 @@ type ZookeeperClusterSpec struct {
 	Config map[string]int `json:"config,omitempty"`
 }
 
+// ServerState is the server state of cluster, which takes from Zookeeper AdminServer
+type ServerState struct {
+	Address string `json:"address"`
+
+	PacketsSent int `json:"packets_sent"`
+
+	PacketsReceived int `json:"packets_received"`
+}
+
 // ZookeeperClusterStatus defines the observed state of ZookeeperCluster
 type ZookeeperClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -44,19 +53,19 @@ type ZookeeperClusterStatus struct {
 	Replicas int32 `json:"replicas,omitempty"`
 
 	// ReadyReplicas is the actual replicas count in the cluster
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	ReadyReplicas int32 `json:"readyReplicas"`
 
-	// Address is the exposed service endpoint of the cluster
-	Address string `json:"address,omitempty"`
+	// Endpoint is the exposed service endpoint of the cluster
+	Endpoint string `json:"endpoint,omitempty"`
 
-	// Nodes is the cluster pod status, podIP and role
-	Nodes map[string]string `json:"nodes,omitempty"`
+	// Servers is the server list with state of cluster
+	Servers map[string][]ServerState `json:"servers,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`,description="The actual Zookeeper servers"
-//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.address`,description="The exposed service endpoint of the cluster"
+//+kubebuilder:printcolumn:name="Endpoint",type=string,JSONPath=`.status.endpoint`,description="The exposed service endpoint of the cluster"
 
 // ZookeeperCluster is the Schema for the zookeeperclusters API
 type ZookeeperCluster struct {

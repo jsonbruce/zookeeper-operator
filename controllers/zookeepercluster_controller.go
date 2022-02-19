@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -85,7 +86,7 @@ func (r *ZookeeperClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	} {
 		if err := fn(ctx, zk); err != nil {
 			if err == ErrResultRequeue {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -206,14 +207,12 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 	}
 
 	if len(actualPods.Items) > 0 && len(actualPods.Items[0].Status.HostIP) > 0 {
-		zk.Status.Address = fmt.Sprintf("%s:%d", actualPods.Items[0].Status.HostIP, actualServiceClient.Spec.Ports[0].NodePort)
+		zk.Status.Endpoint = fmt.Sprintf("%s:%d", actualPods.Items[0].Status.HostIP, actualServiceClient.Spec.Ports[0].NodePort)
 	}
 
-	if zk.Status.Nodes == nil {
-		zk.Status.Nodes = make(map[string]string)
-	}
+	zk.Status.ReadyReplicas = 0
+	zk.Status.Servers = make(map[string][]zookeeperv1alpha1.ServerState)
 
-	readyReplicas := 0
 	for _, pod := range actualPods.Items {
 		podIP := pod.Status.PodIP
 		if len(podIP) == 0 {
@@ -226,17 +225,28 @@ func (r *ZookeeperClusterReconciler) reconcileZookeeperClusterStatus(ctx context
 			continue
 		}
 
-		zk.Status.Nodes[podIP] = zkStat.ServerStats.ServerState
-		readyReplicas++
-	}
+		if zkStat.Error != nil {
+			r.Logger.Info(fmt.Sprintf("Get Zookeeper stat error: %v", zkStat.Error))
+			continue
+		}
 
-	zk.Status.ReadyReplicas = int32(readyReplicas)
+		if _, exist := zk.Status.Servers[zkStat.ServerStats.ServerState]; !exist {
+			zk.Status.Servers[zkStat.ServerStats.ServerState] = make([]zookeeperv1alpha1.ServerState, 0)
+		}
+		zk.Status.Servers[zkStat.ServerStats.ServerState] = append(zk.Status.Servers[zkStat.ServerStats.ServerState], zookeeperv1alpha1.ServerState{
+			Address:         podIP,
+			PacketsSent:     zkStat.ServerStats.PacketsSent,
+			PacketsReceived: zkStat.ServerStats.PacketsReceived,
+		})
+
+		zk.Status.ReadyReplicas++
+	}
 
 	if err := r.Status().Update(ctx, zk); err != nil {
 		return err
 	}
 
-	if zk.Spec.Replicas == zk.Status.ReadyReplicas && zk.Spec.Replicas == int32(len(zk.Status.Nodes)) {
+	if zk.Spec.Replicas == zk.Status.ReadyReplicas {
 		return nil
 	}
 
@@ -254,6 +264,10 @@ func (r *ZookeeperClusterReconciler) createHeadlessService(zk *zookeeperv1alpha1
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
+				{
+					Name: "client",
+					Port: 2181,
+				},
 				{
 					Name: "server",
 					Port: 2888,

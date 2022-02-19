@@ -21,8 +21,8 @@ spec:
       name: Ready
       type: integer
     - description: The exposed service endpoint of the cluster
-      jsonPath: .status.address
-      name: Address
+      jsonPath: .status.endpoint
+      name: Endpoint
       type: string
     name: v1alpha1
     schema:
@@ -59,14 +59,9 @@ spec:
           status:
             description: ZookeeperClusterStatus defines the observed state of ZookeeperCluster
             properties:
-              address:
-                description: Address is the exposed service endpoint of the cluster
+              endpoint:
+                description: Endpoint is the exposed service endpoint of the cluster
                 type: string
-              nodes:
-                additionalProperties:
-                  type: string
-                description: Nodes is the cluster pod status, podIP and role
-                type: object
               readyReplicas:
                 description: ReadyReplicas is the actual replicas count in the cluster
                 format: int32
@@ -75,6 +70,28 @@ spec:
                 description: Replicas is the desired replicas count in the cluster
                 format: int32
                 type: integer
+              servers:
+                additionalProperties:
+                  items:
+                    description: ServerState is the server state of cluster, which
+                      takes from Zookeeper AdminServer
+                    properties:
+                      address:
+                        type: string
+                      packets_received:
+                        type: integer
+                      packets_sent:
+                        type: integer
+                    required:
+                    - address
+                    - packets_received
+                    - packets_sent
+                    type: object
+                  type: array
+                description: Servers is the server list with state of cluster
+                type: object
+            required:
+            - readyReplicas
             type: object
         type: object
     served: true
