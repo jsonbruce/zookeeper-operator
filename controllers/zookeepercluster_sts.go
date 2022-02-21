@@ -102,7 +102,7 @@ func (r *ZookeeperClusterReconciler) createStatefulSet(zk *zookeeperv1alpha1.Zoo
 		return &corev1.Lifecycle{
 			PostStart: &corev1.LifecycleHandler{
 				Exec: &corev1.ExecAction{
-					Command: []string{"/bin/sh", "-c", "echo ${HOSTNAME##*-} > ${ZOO_DATA_DIR}/myid && sed -i -e \"s/$(hostname -f)/0.0.0.0/g\" ${ZOO_CONF_DIR}/zoo.cfg"},
+					Command: []string{"/bin/sh", "-c", "echo ${HOSTNAME##*-} > ${ZOO_DATA_DIR}/myid"},
 				},
 			},
 		}
