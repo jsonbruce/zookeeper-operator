@@ -1,0 +1,382 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: zookeeper-operator-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: zookeeperclusters.zookeeper.atmax.io
+spec:
+  group: zookeeper.atmax.io
+  names:
+    kind: ZookeeperCluster
+    listKind: ZookeeperClusterList
+    plural: zookeeperclusters
+    singular: zookeepercluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The actual Zookeeper servers
+      jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - description: The exposed service endpoint of the cluster
+      jsonPath: .status.endpoint
+      name: Endpoint
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ZookeeperCluster is the Schema for the zookeeperclusters API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ZookeeperClusterSpec defines the desired state of ZookeeperCluster
+            properties:
+              config:
+                additionalProperties:
+                  type: integer
+                description: Config is a group of environment variables, which will be injected to the zookeeper configuration
+                type: object
+              replicas:
+                description: Replicas is the desired servers count of a zookeeper cluster
+                format: int32
+                type: integer
+            type: object
+          status:
+            description: ZookeeperClusterStatus defines the observed state of ZookeeperCluster
+            properties:
+              endpoint:
+                description: Endpoint is the exposed service endpoint of the cluster
+                type: string
+              readyReplicas:
+                description: ReadyReplicas is the actual replicas count in the cluster
+                format: int32
+                type: integer
+              replicas:
+                description: Replicas is the desired replicas count in the cluster
+                format: int32
+                type: integer
+              servers:
+                additionalProperties:
+                  items:
+                    description: ServerState is the server state of cluster, which takes from Zookeeper AdminServer
+                    properties:
+                      address:
+                        type: string
+                      packets_received:
+                        type: integer
+                      packets_sent:
+                        type: integer
+                    required:
+                    - address
+                    - packets_received
+                    - packets_sent
+                    type: object
+                  type: array
+                description: Servers is the server list with state of cluster
+                type: object
+            required:
+            - readyReplicas
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zookeeper-operator-controller-manager
+  namespace: zookeeper-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zookeeper-operator-leader-election-role
+  namespace: zookeeper-operator-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: zookeeper-operator-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - zookeeper.atmax.io
+  resources:
+  - zookeeperclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - zookeeper.atmax.io
+  resources:
+  - zookeeperclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - zookeeper.atmax.io
+  resources:
+  - zookeeperclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zookeeper-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zookeeper-operator-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zookeeper-operator-leader-election-rolebinding
+  namespace: zookeeper-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zookeeper-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: zookeeper-operator-controller-manager
+  namespace: zookeeper-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zookeeper-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: zookeeper-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: zookeeper-operator-controller-manager
+  namespace: zookeeper-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zookeeper-operator-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: zookeeper-operator-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: zookeeper-operator-controller-manager
+  namespace: zookeeper-operator-system
+---
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+    kind: ControllerManagerConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: 289cf3a5.atmax.io
+kind: ConfigMap
+metadata:
+  name: zookeeper-operator-manager-config
+  namespace: zookeeper-operator-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: zookeeper-operator-controller-manager-metrics-service
+  namespace: zookeeper-operator-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: zookeeper-operator-controller-manager
+  namespace: zookeeper-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        image: ghcr.io/jsonbruce/zookeeper-operator:latest
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: zookeeper-operator-controller-manager
+      terminationGracePeriodSeconds: 10
