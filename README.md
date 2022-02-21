@@ -1,6 +1,6 @@
 # ZooKeeper Operator
 
-![workflow](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yml/badge.svg)
+[![ci](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yaml)
 
 A simple ZooKeeper Operator, which is responsible for operating ZooKeeper cluster.
 
