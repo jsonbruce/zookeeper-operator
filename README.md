@@ -1,34 +1,30 @@
-# Zookeeper Operator
+# ZooKeeper Operator
 
-A simple Zookeeper Operator, which is responsible for operating zookeeper cluster.
+![workflow](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yml/badge.svg)
+
+A simple ZooKeeper Operator, which is responsible for operating ZooKeeper cluster.
 
 What we have?
 
-- [x] Deploy a zookeeper cluster quickly
-- [x] Zookeeper configurations load
-- [x] Expose zookeeper service to user
-- [x] Zookeeper cluster status synchronization
+- [x] Deploy a ZooKeeper cluster quickly
+- [x] ZooKeeper configurations load
+- [x] Accessibility of ZooKeeper service for end user
+- [x] Observability of ZooKeeper cluster status
 
 What not provided?
 
-- [ ] Zookeeper configurations reload
+- [ ] ZooKeeper configurations reload
 - [ ] Webhook
 
-## Installation
-1. Deploy the CRD
+## Quickstart
+### Installation
 
-```
-kubectl create -f zk-crd.yaml
-```
-
-2. Deploy the Controller
-
-```
-kubectl create -f zk-controller.yaml
+```shell
+kubectl create -f https://raw.githubusercontent.com/jsonbruce/zookeeper-operator/master/deployments/zookeeper-operator.yaml
 ```
 
-## Usage
-1. Create a CR named `zk-cr.yaml` with below contents to setup a 3-node zookeeper cluster
+### Usage
+1. Create a CR named `zk-cr.yaml` with below contents to setup a 3-nodes ZooKeeper cluster
 
 ```yaml
 apiVersion: "zookeepercluster.atmax.io/v1alpha1"
@@ -57,9 +53,9 @@ NAME                      READY   ENDPOINT
 zookeepercluster-sample   3       10.80.31.21:16146  
 ```
 
-Then user can access the Zookeeper cluster via `10.80.31.21:16146`
+Then user can access the ZooKeeper cluster via `10.80.31.21:16146`
 
-More details about this cluster can be found via `kubectl get zookeepercluster zookeepercluster-sample -o yaml` 
+More details about this cluster can be found via `kubectl get zookeepercluster zookeepercluster-sample -o yaml`
 
 ```yaml
 status:
@@ -78,3 +74,15 @@ status:
       packets_received: 0
       packets_sent: 0
 ```
+
+### Uninstallation
+
+```shell
+kubectl delete -f https://raw.githubusercontent.com/jsonbruce/zookeeper-operator/master/deployments/zookeeper-operator.yaml
+```
+
+## Development
+### Prerequisites
+
+- Golang v1.17+
+- Kubebuilder v3+
