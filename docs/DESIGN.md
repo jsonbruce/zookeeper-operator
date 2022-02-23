@@ -31,7 +31,7 @@ According to current design and implementation, the below diagram illustrates en
 
 The reconciliation strategy for resources is creating if no exist. The zookeeper stats will be sync into `.status.servers`, which is a map, the key is server role and value is server state.
 
-We stop requeue by comparing the actual and number of Pods, the size of `.status.servers` with the desired replicas. So we can say the cluster is ready when all servers respond stats successfully.
+We requeue again at regular intervals, which is currently 10 seconds. In this way, we can continuously observe the cluster status.
 
 ### Pros & Cons
 Pros:
