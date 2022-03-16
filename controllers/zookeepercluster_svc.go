@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	zookeeperv1alpha1 "github.com/jsonbruce/zookeeper-operator/api/v1alpha1"
+	zookeeperv1alpha1 "github.com/maxsxu/zookeeper-operator/api/v1alpha1"
 )
 
 func (r *ZookeeperClusterReconciler) reconcileHeadlessService(ctx context.Context, zk *zookeeperv1alpha1.ZookeeperCluster) error {

@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	zookeeperv1alpha1 "github.com/jsonbruce/zookeeper-operator/api/v1alpha1"
-	"github.com/jsonbruce/zookeeper-operator/controllers"
+	zookeeperv1alpha1 "github.com/maxsxu/zookeeper-operator/api/v1alpha1"
+	"github.com/maxsxu/zookeeper-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

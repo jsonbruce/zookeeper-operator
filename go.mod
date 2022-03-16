@@ -1,4 +1,4 @@
-module github.com/jsonbruce/zookeeper-operator
+module github.com/maxsxu/zookeeper-operator
 
 go 1.17
 

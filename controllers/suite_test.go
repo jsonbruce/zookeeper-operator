@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	zookeeperv1alpha1 "github.com/jsonbruce/zookeeper-operator/api/v1alpha1"
+	zookeeperv1alpha1 "github.com/maxsxu/zookeeper-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
