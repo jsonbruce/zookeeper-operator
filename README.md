@@ -1,6 +1,6 @@
 # ZooKeeper Operator
 
-[![ci](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/jsonbruce/zookeeper-operator/actions/workflows/ci.yaml)
+[![ci](https://github.com/maxsxu/zookeeper-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/maxsxu/zookeeper-operator/actions/workflows/ci.yaml)
 
 A simple ZooKeeper Operator, which is responsible for operating ZooKeeper cluster.
 
@@ -20,7 +20,7 @@ What not provided?
 ### Installation
 
 ```shell
-kubectl create -f https://raw.githubusercontent.com/jsonbruce/zookeeper-operator/master/deployments/zookeeper-operator.yaml
+kubectl create -f https://raw.githubusercontent.com/maxsxu/zookeeper-operator/master/deployments/zookeeper-operator.yaml
 ```
 
 ### Usage
@@ -78,7 +78,7 @@ status:
 ### Uninstallation
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/jsonbruce/zookeeper-operator/master/deployments/zookeeper-operator.yaml
+kubectl delete -f https://raw.githubusercontent.com/maxsxu/zookeeper-operator/master/deployments/zookeeper-operator.yaml
 ```
 
 ## Development
